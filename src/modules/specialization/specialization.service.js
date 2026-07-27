@@ -7,6 +7,74 @@ import ApiError from "../../utils/ApiError.js";
 import baseService from "../../services/base.service.js";
 
 /**
+ * Ensure specialization fields are unique within one Course Catalog.
+ */
+const ensureSpecializationIsUnique = async ({
+  courseCatalog,
+  name,
+  code,
+  slug,
+  excludeId,
+}) => {
+  const conditions = [];
+
+  if (name) {
+    conditions.push({ name });
+  }
+
+  if (code) {
+    conditions.push({ code });
+  }
+
+  if (slug) {
+    conditions.push({ slug });
+  }
+
+  if (!conditions.length) {
+    return;
+  }
+
+  const filter = {
+    courseCatalog,
+    isDeleted: false,
+    $or: conditions,
+  };
+
+  if (excludeId) {
+    filter._id = {
+      $ne: excludeId,
+    };
+  }
+
+  const existingSpecialization = await Specialization.findOne(filter).lean();
+
+  if (!existingSpecialization) {
+    return;
+  }
+
+  if (name && existingSpecialization.name === name) {
+    throw new ApiError(
+      409,
+      "Specialization name already exists for this course catalog.",
+    );
+  }
+
+  if (code && existingSpecialization.code === code) {
+    throw new ApiError(
+      409,
+      "Specialization code already exists for this course catalog.",
+    );
+  }
+
+  if (slug && existingSpecialization.slug === slug) {
+    throw new ApiError(
+      409,
+      "Specialization slug already exists for this course catalog.",
+    );
+  }
+};
+
+/**
  * Create Specialization
  */
 const createSpecialization = async (payload) => {
@@ -24,26 +92,12 @@ const createSpecialization = async (payload) => {
   // Validate Course Catalog
   await baseService.findById(CourseCatalog, normalizedPayload.courseCatalog);
 
-  const existingSpecialization = await Specialization.findOne({
-    $or: [
-      { name: normalizedPayload.name },
-      { code: normalizedPayload.code },
-      { slug: normalizedPayload.slug },
-    ],
-    isDeleted: false,
+  await ensureSpecializationIsUnique({
+    courseCatalog: normalizedPayload.courseCatalog,
+    name: normalizedPayload.name,
+    code: normalizedPayload.code,
+    slug: normalizedPayload.slug,
   });
-
-  if (existingSpecialization?.name === normalizedPayload.name) {
-    throw new ApiError(409, "Specialization name already exists.");
-  }
-
-  if (existingSpecialization?.code === normalizedPayload.code) {
-    throw new ApiError(409, "Specialization code already exists.");
-  }
-
-  if (existingSpecialization?.slug === normalizedPayload.slug) {
-    throw new ApiError(409, "Specialization slug already exists.");
-  }
 
   return await Specialization.create(normalizedPayload);
 };
@@ -61,7 +115,9 @@ const getSpecializations = async ({
   sortBy = "displayOrder",
   sortOrder = "asc",
 }) => {
-  const filter = {};
+  const filter = {
+    isDeleted: false,
+  };
 
   if (search) {
     filter.$or = [
@@ -121,58 +177,48 @@ const updateSpecialization = async (id, payload) => {
     ...payload,
   };
 
-  if (payload.name) {
+  if (payload.name !== undefined) {
     normalizedPayload.name = payload.name.trim();
 
     normalizedPayload.slug = slugify(normalizedPayload.name, {
       lower: true,
       strict: true,
     });
-
-    const existingName = await Specialization.findOne({
-      name: normalizedPayload.name,
-      _id: { $ne: id },
-      isDeleted: false,
-    });
-
-    if (existingName) {
-      throw new ApiError(409, "Specialization name already exists.");
-    }
-
-    const existingSlug = await Specialization.findOne({
-      slug: normalizedPayload.slug,
-      _id: { $ne: id },
-      isDeleted: false,
-    });
-
-    if (existingSlug) {
-      throw new ApiError(409, "Specialization slug already exists.");
-    }
   }
 
-  if (payload.code) {
+  if (payload.code !== undefined) {
     normalizedPayload.code = payload.code.trim().toUpperCase();
-
-    const existingCode = await Specialization.findOne({
-      code: normalizedPayload.code,
-      _id: { $ne: id },
-      isDeleted: false,
-    });
-
-    if (existingCode) {
-      throw new ApiError(409, "Specialization code already exists.");
-    }
   }
+
+  const effectiveCourseCatalog =
+    normalizedPayload.courseCatalog ?? specialization.courseCatalog;
+
+  const effectiveName = normalizedPayload.name ?? specialization.name;
+
+  const effectiveCode = normalizedPayload.code ?? specialization.code;
+
+  const effectiveSlug = normalizedPayload.slug ?? specialization.slug;
 
   if (payload.courseCatalog) {
     await baseService.findById(CourseCatalog, payload.courseCatalog);
   }
 
+  await ensureSpecializationIsUnique({
+    courseCatalog: effectiveCourseCatalog,
+    name: effectiveName,
+    code: effectiveCode,
+    slug: effectiveSlug,
+    excludeId: id,
+  });
+
   Object.assign(specialization, normalizedPayload);
 
   await specialization.save();
 
-  return specialization;
+  return await Specialization.findById(specialization._id).populate([
+    "courseCatalog",
+    "icon",
+  ]);
 };
 
 /**

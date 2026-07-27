@@ -88,6 +88,29 @@ const specializationSchema = new mongoose.Schema(
 /**
  * Search & Filter Index
  */
+/**
+ * A specialization name, slug and code must be unique
+ * only within the same Course Catalog.
+ *
+ * Examples:
+ * BBA  + Business Analytics ✅
+ * B.Com + Business Analytics ✅
+ * BBA  + Business Analytics again ❌
+ */
+
+specializationSchema.index(
+  {
+    courseCatalog: 1,
+    name: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isDeleted: false,
+    },
+  },
+);
+
 specializationSchema.index(
   {
     courseCatalog: 1,
@@ -95,6 +118,9 @@ specializationSchema.index(
   },
   {
     unique: true,
+    partialFilterExpression: {
+      isDeleted: false,
+    },
   },
 );
 
@@ -105,6 +131,9 @@ specializationSchema.index(
   },
   {
     unique: true,
+    partialFilterExpression: {
+      isDeleted: false,
+    },
   },
 );
 
