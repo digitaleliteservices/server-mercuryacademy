@@ -55,15 +55,15 @@ const createLead = async (payload) => {
   /**
    * Prevent duplicate lead
    */
-  const existingLead = await Lead.findOne({
-    email: normalizedPayload.email,
-    universityCourse: normalizedPayload.universityCourse,
-    isDeleted: false,
-  });
+  // const existingLead = await Lead.findOne({
+  //   email: normalizedPayload.email,
+  //   universityCourse: normalizedPayload.universityCourse,
+  //   isDeleted: false,
+  // });
 
-  if (existingLead) {
-    throw new ApiError(409, "A lead already exists for this email and course.");
-  }
+  // if (existingLead) {
+  //   throw new ApiError(409, "A lead already exists for this email and course.");
+  // }
 
   return await Lead.create(normalizedPayload);
 };
@@ -268,22 +268,22 @@ const updateLead = async (id, payload) => {
   /**
    * Duplicate Check
    */
-  if (normalizedPayload.email || normalizedPayload.universityCourse) {
-    const existingLead = await Lead.findOne({
-      email: normalizedPayload.email || lead.email,
-      universityCourse:
-        normalizedPayload.universityCourse || lead.universityCourse,
-      _id: { $ne: id },
-      isDeleted: false,
-    });
+  // if (normalizedPayload.email || normalizedPayload.universityCourse) {
+  //   const existingLead = await Lead.findOne({
+  //     email: normalizedPayload.email || lead.email,
+  //     universityCourse:
+  //       normalizedPayload.universityCourse || lead.universityCourse,
+  //     _id: { $ne: id },
+  //     isDeleted: false,
+  //   });
 
-    if (existingLead) {
-      throw new ApiError(
-        409,
-        "A lead already exists for this email and course.",
-      );
-    }
-  }
+  //   if (existingLead) {
+  //     throw new ApiError(
+  //       409,
+  //       "A lead already exists for this email and course.",
+  //     );
+  //   }
+  // }
 
   Object.assign(lead, normalizedPayload);
 
