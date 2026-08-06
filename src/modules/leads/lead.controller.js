@@ -1,19 +1,24 @@
 import asyncHandler from "../../utils/asyncHandler.js";
 import ApiResponse from "../../utils/ApiResponse.js";
+import { sendLeadEmail } from "../../config/mailer.js";
 
 import leadService from "./lead.service.js";
 
 /**
  * Create Lead
  */
+
 const createLead = asyncHandler(async (req, res) => {
   const lead = await leadService.createLead(req.body);
+
+  sendLeadEmail(lead).catch((err) => {
+    console.error("Failed to send lead email:", err);
+  });
 
   return res
     .status(201)
     .json(new ApiResponse(201, "Lead created successfully.", lead));
 });
-
 /**
  * Get Leads
  */

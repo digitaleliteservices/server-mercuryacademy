@@ -202,7 +202,7 @@ const getUniversities = async ({
     limit,
     sortBy,
     sortOrder,
-    populate: ["approvals", "country", "state", "city"],
+    populate: universityPopulate,
   });
 };
 
